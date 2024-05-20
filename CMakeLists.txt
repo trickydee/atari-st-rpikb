@@ -16,6 +16,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 cmake_minimum_required(VERSION 3.29)
+set(FAMILY rp2040)
+set(BOARD pico_sdk)
 
 # Pull in SDK (must be before project)
 
@@ -54,6 +56,7 @@ target_include_directories(
     src
     include
     ${INCLUDES}
+    ${CMAKE_CURRENT_LIST_DIR}
 )
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-int")

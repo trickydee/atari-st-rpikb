@@ -35,6 +35,9 @@
 #define ROMBASE     256
 #define CYCLES_PER_LOOP 1000
 
+
+// Declare the ROM image for the HD6301
+
 extern unsigned char rom_HD6301V1ST_img[];
 extern unsigned int rom_HD6301V1ST_img_len;
 
@@ -56,13 +59,20 @@ static void handle_rx_from_st() {
  * Prepare the HD6301 and load the ROM file
  */
 void setup_hd6301() {
+
+    // Init the hd6301
     BYTE* pram = hd6301_init();
     if (!pram) {
         printf("Failed to initialise HD6301\n");
         exit(-1);
     }
+    
+    // Copy the ROM image
     memcpy(pram + ROMBASE, rom_HD6301V1ST_img, rom_HD6301V1ST_img_len);
 }
+
+
+// Initialize CORE1
 
 void core1_entry() {
     // Initialise the HD6301
@@ -93,6 +103,7 @@ int main() {
     board_init();
     tusb_init();
 
+    // Initialize the UI
     UserInterface ui;
     ui.init();
     ui.update();

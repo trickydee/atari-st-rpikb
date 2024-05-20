@@ -32,10 +32,15 @@
 #define ATARI_ALT    56
 #define ATARI_CTRL   29
 
+#define HID_NONE        0
+#define HID_KEYBOARD    1
+#define HID_MOUSE       2
+#define HID_JOYSTICK    3
+
 #define GET_I32_VALUE(item)     (int32_t)(item->Value | ((item->Value & (1 << (item->Attributes.BitSize-1))) ? ~((1 << item->Attributes.BitSize) - 1) : 0))
 #define JOY_GPIO_INIT(io)       gpio_init(io); gpio_set_dir(io, GPIO_IN); gpio_pull_up(io);
 
-static std::map<int, uint8_t*> device;
+static std::map<uint8_t, uint8_t> device; // Create device list with device address and instance
 static UserInterface* ui_ = nullptr;
 static int kb_count = 0;
 static int mouse_count = 0;
@@ -43,33 +48,61 @@ static int joy_count = 0;
 
 extern "C" {
 
-void tuh_hid_mounted_cb(uint8_t dev_addr) {
-    HID_TYPE tp = tuh_hid_get_type(dev_addr);
+// Manage device connections and disconnections
+// Register the deivces in the device map. 
+
+
+/// @brief Callback: New device has been plugged in 
+/// @param dev_addr Address of the new device
+/// @param instance Interface index of the device
+/// @param desc_report Description report 
+/// @param desc_len Length of the description reportg
+
+
+void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len) {
+    
+    // Interface protocol (hid_interface_protocol_enum_t)
+    
+    uint8_t const tp = tuh_hid_interface_protocol(dev_addr, instance);
+
+    // New KEYBOARD mounted ?
     if (tp == HID_KEYBOARD) {
         printf("A keyboard device (address %d) is mounted\r\n", dev_addr);
-        device[dev_addr] = new uint8_t[sizeof(hid_keyboard_report_t)];
-        tuh_hid_get_report(dev_addr, device[dev_addr]);
+        device[dev_addr] = instance;
+        tuh_hid_receive_report(dev_addr, instance); // Ready to receive report for this device
         ++kb_count;
     }
+    // New MOUSE mounted ? 
     else if (tp == HID_MOUSE) {
         printf("A mouse device (address %d) is mounted\r\n", dev_addr);
-        device[dev_addr] = new uint8_t[tuh_hid_get_report_size(dev_addr)];
-        tuh_hid_get_report(dev_addr, device[dev_addr]);
+        device[dev_addr] = instance;
+        tuh_hid_receive_report(dev_addr, instance); // Ready to receive report for this device
         ++mouse_count;
     }
+    // New JOYSTICK mounted ? 
     else if (tp == HID_JOYSTICK) {
         printf("A joystick device (address %d) is mounted\r\n", dev_addr);
-        device[dev_addr] = new uint8_t[tuh_hid_get_report_size(dev_addr)];
-        tuh_hid_get_report(dev_addr, device[dev_addr]);
+        device[dev_addr] = instance;
+        tuh_hid_receive_report(dev_addr, instance); // Ready to receive report for this device
         ++joy_count;
     }
+    // Update the GUI to reflect the device change
     if (ui_) {
         ui_->usb_connect_state(kb_count, mouse_count, joy_count);
     }
 }
 
-void tuh_hid_unmounted_cb(uint8_t dev_addr) {
-    HID_TYPE tp = tuh_hid_get_type(dev_addr);
+/// @brief Device has been unplugged
+/// @param dev_addr Address of the device
+/// @param instance Interface Index. 
+
+void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
+
+   // Interface protocol (hid_interface_protocol_enum_t)
+   // Get the type of device unplugged in order to decrement the proper counter
+    
+    uint8_t const tp = tuh_hid_interface_protocol(dev_addr, instance);
+
     if (tp == HID_KEYBOARD) {
         printf("A keyboard device (address %d) is unmounted\r\n", dev_addr);
         --kb_count;
@@ -82,11 +115,15 @@ void tuh_hid_unmounted_cb(uint8_t dev_addr) {
         printf("A joystick device (address %d) is unmounted\r\n", dev_addr);
         --joy_count;
     }
+    // Actually remove device from device map. 
+    
     auto it = device.find(dev_addr);
     if (it != device.end()) {
-        delete[] it->second;
+        //delete[] it->second;
         device.erase(it);
     }
+
+    // Update the UI
     if (ui_) {
         ui_->usb_connect_state(kb_count, mouse_count, joy_count);
     }
@@ -130,10 +167,10 @@ void HidInput::open(const std::string& kbdev, const std::string& mousedev, const
 
 void HidInput::handle_keyboard() {
     for (auto it : device) {
-        if (tuh_hid_get_type(it.first) != HID_KEYBOARD) {
+        if (tuh_hid_interface_protocol(it.first,it.second) != HID_KEYBOARD) {
             continue;
         }
-        if (tuh_hid_is_mounted(it.first) && !tuh_hid_is_busy(it.first)) {
+        if (tuh_hid_mounted(it.first,it.second) && !tuh_hid_busy(it.first)) {
             hid_keyboard_report_t* kb = (hid_keyboard_report_t*)it.second;
 
             // Translate the USB HID codes into ST keys that are currently down
@@ -178,7 +215,7 @@ void HidInput::handle_mouse(const int64_t cpu_cycles) {
     int32_t x = 0;
     int32_t y = 0;
     for (auto it : device) {
-        if (tuh_hid_get_type(it.first) != HID_MOUSE) {
+        if (tuh_hid_interface_protocol(it.first) != HID_MOUSE) {
             continue;
         }
         if (tuh_hid_is_mounted(it.first) && !tuh_hid_is_busy(it.first)) {
