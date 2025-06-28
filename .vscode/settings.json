@@ -1,0 +1,5 @@
+{
+    "cmake.environment": {
+        "PICO_SDK_PATH":"${env:PICO_SDK_PATH}"
+    },
+}
