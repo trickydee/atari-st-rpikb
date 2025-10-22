@@ -62,10 +62,6 @@ cd atari-st-rpikb
 git submodule sync
 git submodule update --init --recursive
 
-# fix missing hidparser include in cmakelists.txt
-cp pico-sdk/src/rp2_common/tinyusb/CMakeLists.txt pico-sdk/src/rp2_common/tinyusb/CMakeLists.old
-sed -E $'91i\\\n            ${PICO_TINYUSB_PATH}/src/class/hid/hidparser/HIDParser.c\n' pico-sdk/src/rp2_common/tinyusb/CMakeLists.old > pico-sdk/src/rp2_common/tinyusb/CMakeLists.txt
-
 # Build for Raspberry Pi Pico (RP2040) - default
 cmake -B build -S . -DPICO_BOARD=pico && cd build && make
 
