@@ -157,8 +157,8 @@ The emulator supports several keyboard shortcuts for convenient control:
 | **Ctrl+F10** | Toggle Joystick 1 | Switches Joystick 1 between D-SUB and USB |
 | **Ctrl+F9** | Toggle Joystick 0 | Switches Joystick 0 between D-SUB and USB |
 | **Alt+/** | INSERT Key | Sends Atari ST INSERT key (useful for modern keyboards) |
-| **Alt+[** | Keypad /** | Sends Atari ST keypad divide key |
-| **Alt+]** | Keypad *** | Sends Atari ST keypad multiply key |
+| **Alt+[** | Keypad /** | Sends Atari ST keypad divide key - Default HAGA Save key |
+| **Alt+]** | Keypad *** | Sends Atari ST keypad multiply key - Default HAGA Quit key |
 | **Alt+Plus** | Set 270MHz | Overclocks RP2040 to 270MHz for maximum performance |
 | **Alt+Minus** | Set 150MHz | Sets RP2040 to 150MHz for stability |
 
